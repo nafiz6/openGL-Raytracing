@@ -2,8 +2,11 @@
 #include <sstream>
 #include <fstream>
 #include <vector>
+#include<math.h>
+#include <GL/glut.h>
 
 using namespace std;
+#define pi (2*acos(0.0))
 
 class Vector3D {
 	public:
@@ -25,8 +28,11 @@ class Object {
 		double coefficients[4]; // reflection coefficients
 		int shine; // exponent term of specular component
 		int A,B,C,D,E,F,G,H,I,J;
-		Object(){}
-		virtual void draw(){}
+		Object(){
+			cout << "Drawing obj\n";
+		}
+		virtual void draw(){
+		}
 		void setColor(double c[]){
 			color[0] = c[0];
 			color[1] = c[1];
@@ -53,7 +59,48 @@ class Sphere: public Object {
 		}
 
 		void draw(){
-
+			Vector3D points[100][100];
+			int i, j;
+			double h, r;
+			//generate points
+			int stacks = 20;
+			int slices = 24;
+			for (i = 0; i <= stacks; i++)
+			{
+				h = length * sin(((double)i / (double)stacks) * (pi / 2));
+				r = length * cos(((double)i / (double)stacks) * (pi / 2));
+				for (j = 0; j <= slices; j++)
+				{
+					points[i][j].x = r * cos(((double)j / (double)slices) * 2 * pi);
+					points[i][j].y = r * sin(((double)j / (double)slices) * 2 * pi);
+					points[i][j].z = h;
+				}
+			}
+			//draw quads using generated points
+			for (i = 0; i < stacks; i++)
+			{
+				glPushMatrix();
+				glTranslatef(reference_point.x, reference_point.y, reference_point.z);
+				glColor3f(color[0], color[1], color[2]);
+				for (j = 0; j < slices; j++)
+				{
+					glBegin(GL_QUADS);
+					{
+						//upper hemisphere
+						glVertex3f(points[i][j].x, points[i][j].y, points[i][j].z);
+						glVertex3f(points[i][j + 1].x, points[i][j + 1].y, points[i][j + 1].z);
+						glVertex3f(points[i + 1][j + 1].x, points[i + 1][j + 1].y, points[i + 1][j + 1].z);
+						glVertex3f(points[i + 1][j].x, points[i + 1][j].y, points[i + 1][j].z);
+						//lower hemisphere
+						glVertex3f(points[i][j].x, points[i][j].y, -points[i][j].z);
+						glVertex3f(points[i][j + 1].x, points[i][j + 1].y, -points[i][j + 1].z);
+						glVertex3f(points[i + 1][j + 1].x, points[i + 1][j + 1].y, -points[i + 1][j + 1].z);
+						glVertex3f(points[i + 1][j].x, points[i + 1][j].y, -points[i + 1][j].z);
+					}
+					glEnd();
+				}
+				glPopMatrix();
+			}
 		}
 
 };
@@ -95,7 +142,7 @@ public:
 
 
 // declaration
-extern vector <Object> objects;
+extern vector <Object*> objects;
 extern vector <Light> lights;
 
 
@@ -154,10 +201,11 @@ void loadData(){
 			lineCoefficients >> sphere->coefficients[2];
 			lineCoefficients >> sphere->coefficients[3];
 
+			getline(sceneInput, input);
 			stringstream lineShiny(input);
 			lineShiny >> sphere->shine;
 
-			objects.push_back(*sphere);
+			objects.push_back(sphere);
 
 		}
 		else if (objectName == "triangle"){
@@ -184,24 +232,27 @@ void loadData(){
 			lineC >> triangle->c.z;
 
 
+			getline(sceneInput, input);
 			stringstream lineColor(input);
 			lineColor >> triangle->color[0];
 			lineColor >> triangle->color[1];
 			lineColor >> triangle->color[2];
 
+			getline(sceneInput, input);
 			stringstream lineCoefficients(input);
 			lineCoefficients >> triangle->coefficients[0];
 			lineCoefficients >> triangle->coefficients[1];
 			lineCoefficients >> triangle->coefficients[2];
 			lineCoefficients >> triangle->coefficients[3];
 
+			getline(sceneInput, input);
 			stringstream lineShiny(input);
 			lineShiny >> triangle->shine;
 
-			objects.push_back(*triangle);
+			objects.push_back(triangle);
 
 		}
-		else{
+		else if (objectName=="general"){
 			Object *object;
 			object = new Object();
 			getline(sceneInput, input);
@@ -224,23 +275,29 @@ void loadData(){
 			lineRef >> object->reference_point.y;
 			lineRef >> object->reference_point.z;
 
+			getline(sceneInput, input);
 			stringstream lineColor(input);
 			lineColor >> object->color[0];
 			lineColor >> object->color[1];
 			lineColor >> object->color[2];
 
+			getline(sceneInput, input);
 			stringstream lineCoefficients(input);
 			lineCoefficients >> object->coefficients[0];
 			lineCoefficients >> object->coefficients[1];
 			lineCoefficients >> object->coefficients[2];
 			lineCoefficients >> object->coefficients[3];
 
+			getline(sceneInput, input);
 			stringstream lineShiny(input);
 			lineShiny >> object->shine;
 
-			objects.push_back(*object);
+			objects.push_back(object);
 
 
+		}
+		else{
+			cout << "\ninvalid object name\n";
 		}
 		getline(sceneInput, input);
 	}
@@ -272,6 +329,6 @@ void loadData(){
 
 	Object *floor;
 	floor = new Floor(1000, 20);
-	objects.push_back(*floor);
+	objects.push_back(floor);
 
 }
