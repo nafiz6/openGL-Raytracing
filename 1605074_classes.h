@@ -151,7 +151,6 @@ class Object {
 		double A,B,C,D,E,F,G,H,I,J;
 
 		Object(){
-			cout << "Drawing obj\n";
 		}
 
 		virtual void draw(){
@@ -297,6 +296,34 @@ float Object::intersect(Ray ray, double* color, int level){
 		// Diffuse
 		Vector3D L = vectorSub(intersectPoint, lights[i].light_pos);
 		L = normalize(L);
+
+				int nearest = -1;
+				float minT = -1;
+
+				Ray lightRay(lights[i].light_pos, L);
+				for (int k=0; k<objects.size(); k++){
+					if (this == objects[k])continue;
+					double *dummyColor = new double[3];
+					float newT = objects[k]->intersect(lightRay, dummyColor, 0);
+					if ((nearest == -1 ||  newT < minT) && newT > 0){
+						nearest = k;
+						minT = newT;
+					}
+					delete dummyColor;
+
+				}
+				if (minT >= 0 && this != objects[i]){
+					double currentDist = magnitude(vectorSub(intersectPoint, lights[i].light_pos));
+					Vector3D blockIntersectionPoint = vectorAdd(
+						lights[i].light_pos,
+						scale(L, minT)
+					);
+					double blockDist = magnitude(vectorSub(blockIntersectionPoint, lights[i].light_pos));
+					if (currentDist > blockDist){
+						continue;
+					}
+				}
+
 		double diffuseIntensity = -1 * coefficients[1] * vectorDot(L, normal);
 
 		// Specular
@@ -344,6 +371,7 @@ float Object::intersect(Ray ray, double* color, int level){
 			nearest = k;
 			minT = newT;
 		}
+		delete dummyColor;
 	}
 	if (minT > 0)
 	{
@@ -356,6 +384,7 @@ float Object::intersect(Ray ray, double* color, int level){
 			color[i] = min(color[i], 1.0);
 			color[i] = max(color[i], 0.0);
 		}
+		delete nextColor;
 	}
 	return t;
 		}
@@ -455,7 +484,6 @@ class Sphere: public Object {
 					ray.start,
 					scale(ray.dir, t));
 
-			// Diffuse
 			double intensity[3] = {coefficients[0], coefficients[0], coefficients[0]};
 
 			double totalSpecularIntensity[3] = {0, 0, 0};
@@ -464,6 +492,35 @@ class Sphere: public Object {
 				// Diffuse
 				Vector3D L = vectorSub(intersectionPoint, lights[i].light_pos);
 				L = normalize(L);
+
+				int nearest = -1;
+				float minT = -1;
+
+				Ray lightRay(lights[i].light_pos, L);
+				for (int k=0; k<objects.size(); k++){
+					if (this == objects[k])continue;
+					double *dummyColor = new double[3];
+					float newT = objects[k]->intersect(lightRay, dummyColor, 0);
+					if ((nearest == -1 ||  newT < minT) && newT > 0){
+						nearest = k;
+						minT = newT;
+					}
+					delete dummyColor;
+
+				}
+				if (minT >= 0 && this != objects[i]){
+					double currentDist = magnitude(vectorSub(intersectionPoint, lights[i].light_pos));
+					Vector3D blockIntersectionPoint = vectorAdd(
+						lights[i].light_pos,
+						scale(L, minT)
+					);
+					double blockDist = magnitude(vectorSub(blockIntersectionPoint, lights[i].light_pos));
+					if (currentDist > blockDist){
+						continue;
+					}
+				}
+
+
 				double diffuseIntensity = -1 * coefficients[1] * vectorDot(L, normal);
 
 				// Specular
@@ -511,6 +568,7 @@ class Sphere: public Object {
 					nearest = k;
 					minT = newT;
 				}
+				delete dummyColor;
 
 			}
 			if (minT > 0){
@@ -523,6 +581,7 @@ class Sphere: public Object {
 						retColor[i] = min(retColor[i], 1.0);
 						retColor[i] = max(retColor[i], 0.0);
 					}
+				delete nextColor;
 			}
 
 			return t;
@@ -603,6 +662,34 @@ class Triangle: public Object {
 					// Diffuse
 					Vector3D L = vectorSub(point, lights[i].light_pos);
 					L = normalize(L);
+				int nearest = -1;
+				float minT = -1;
+
+				Ray lightRay(lights[i].light_pos, L);
+				for (int k=0; k<objects.size(); k++){
+					if (this == objects[k])continue;
+					double *dummyColor = new double[3];
+					float newT = objects[k]->intersect(lightRay, dummyColor, 0);
+					if ((nearest == -1 ||  newT < minT) && newT > 0){
+						nearest = k;
+						minT = newT;
+					}
+					delete dummyColor;
+
+				}
+				if (minT >= 0 && this != objects[i]){
+					double currentDist = magnitude(vectorSub(point, lights[i].light_pos));
+					Vector3D blockIntersectionPoint = vectorAdd(
+						lights[i].light_pos,
+						scale(L, minT)
+					);
+					double blockDist = magnitude(vectorSub(blockIntersectionPoint, lights[i].light_pos));
+					if (currentDist > blockDist){
+						continue;
+					}
+				}
+
+
 					double diffuseIntensity = -1 * coefficients[1] * vectorDot(L, normal);
 
 					// Specular
@@ -651,6 +738,7 @@ class Triangle: public Object {
 						nearest = k;
 						minT = newT;
 					}
+					delete dummyColor;
 				}
 				if (minT > 0)
 				{
@@ -663,6 +751,7 @@ class Triangle: public Object {
 						color[i] = min(color[i], 1.0);
 						color[i] = max(color[i], 0.0);
 					}
+					delete nextColor;
 				}
 
 				return t;
@@ -753,6 +842,34 @@ public:
 			// Diffuse
 			Vector3D L = vectorSub(intersectionPoint, lights[i].light_pos);
 			L = normalize(L);
+
+				int nearest = -1;
+				float minT = -1;
+
+				Ray lightRay(lights[i].light_pos, L);
+				for (int k=0; k<objects.size(); k++){
+					if (this == objects[k])continue;
+					double *dummyColor = new double[3];
+					float newT = objects[k]->intersect(lightRay, dummyColor, 0);
+					if ((nearest == -1 ||  newT < minT) && newT > 0){
+						nearest = k;
+						minT = newT;
+					}
+					delete dummyColor;
+
+				}
+				if (minT >= 0 && this != objects[i]){
+					double currentDist = magnitude(vectorSub(intersectionPoint, lights[i].light_pos));
+					Vector3D blockIntersectionPoint = vectorAdd(
+						lights[i].light_pos,
+						scale(L, minT)
+					);
+					double blockDist = magnitude(vectorSub(blockIntersectionPoint, lights[i].light_pos));
+					if (currentDist > blockDist){
+						continue;
+					}
+				}
+
 			double diffuseIntensity = -0.2 * vectorDot(L, normal);
 
 			// Specular
@@ -798,6 +915,7 @@ public:
 				nearest = k;
 				minT = newT;
 			}
+			delete dummyColor;
 		}
 		if (minT > 0)
 		{
@@ -810,6 +928,7 @@ public:
 				color[i] = min(color[i], 1.0);
 				color[i] = max(color[i], 0.0);
 			}
+			delete nextColor;
 		}
 		return t;
 	}
@@ -829,7 +948,7 @@ void loadData(){
 
 	stringstream lineRecursion(input);
 	lineRecursion >> recursionLevel;
-	cout << "REC " << recursionLevel;
+	//cout << "REC " << recursionLevel;
 
 	getline(sceneInput, input);
 	stringstream lineRes(input);
