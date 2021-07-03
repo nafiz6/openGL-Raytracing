@@ -136,7 +136,9 @@ public:
 
 };
 
+// Declaration
 extern vector <Light> lights;
+int recursionLevel;
 
 class Object {
 	public:
@@ -172,156 +174,191 @@ class Object {
 			coefficients[3] = c[3];
 		}
 
-		virtual float intersect(Ray ray, double *color, int level){
-			double t_2_coeff = A * (ray.dir.x * ray.dir.x) +
-							   B * (ray.dir.y * ray.dir.y) +
-							   C * (ray.dir.z * ray.dir.z) +
-							   D * (ray.dir.x * ray.dir.y) +
-							   E * (ray.dir.x * ray.dir.z) +
-							   F * (ray.dir.y * ray.dir.z);
-
-			double t_coeff = 2 * A * (ray.start.x * ray.dir.x) +
-							 2 * B * (ray.start.y * ray.dir.y) +
-							 2 * C * (ray.start.z * ray.dir.z) +
-							 1 * D * (ray.start.x * ray.dir.y) +
-							 1 * D * (ray.start.y * ray.dir.x) +
-							 1 * E * (ray.start.x * ray.dir.z) +
-							 1 * E * (ray.start.z * ray.dir.x) +
-							 1 * F * (ray.start.y * ray.dir.z) +
-							 1 * F * (ray.start.z * ray.dir.y) +
-							 1 * G * (ray.dir.x) +
-							 1 * H * (ray.dir.y) +
-							 1 * I * (ray.dir.z);
-
-			double constant = A * (ray.start.x * ray.start.x) +
-							  B * (ray.start.y * ray.start.y) +
-							  C * (ray.start.z * ray.start.z) +
-							  D * (ray.start.x * ray.start.y) +
-							  E * (ray.start.x * ray.start.z) +
-							  F * (ray.start.y * ray.start.z) +
-							  G * (ray.start.x) +
-							  H * (ray.start.y) +
-							  I * (ray.start.z) +
-							  J;
-
-			double descriminant = (t_coeff * t_coeff) - 4 * t_2_coeff * constant;
-			if (descriminant < 0)
-				return -1;
-
-			double t1 = (-t_coeff + sqrt(descriminant)) / (2 * t_2_coeff);
-			double t2 = (-t_coeff - sqrt(descriminant)) / (2 * t_2_coeff);
-
-			Vector3D intersect1 = vectorAdd(ray.start, scale(ray.dir, t1));
-			Vector3D intersect2 = vectorAdd(ray.start, scale(ray.dir, t2));
-
-			bool t1Valid = t1 >= 0;
-			bool t2Valid = t2 >= 0;
-			if (round(length * 100) != 0 && abs(intersect1.x - reference_point.x) > length)
-			{
-				t1Valid = false;
-			}
-			else if (round(width * 100) != 0 && abs(intersect1.y - reference_point.y) > width)
-			{
-				t1Valid = false;
-			}
-			else if (round(height * 100) != 0 && abs(intersect1.z - reference_point.z) > height)
-			{
-				t1Valid = false;
-			}
-
-			if (round(length * 100) != 0 && abs(intersect2.x - reference_point.x) > length)
-			{
-				t2Valid = false;
-			}
-			else if (round(100 * width) != 0 && abs(intersect2.y - reference_point.y) > width)
-			{
-				t2Valid = false;
-			}
-			else if (round(100 * height) != 0 && abs(intersect2.z - reference_point.z) > height)
-			{
-				t2Valid = false;
-			}
-
-			double t = -1;
-			Vector3D intersectPoint;
-			if (!t1Valid && !t2Valid)
-				return t;
-			if (t1Valid && t2Valid)
-			{
-				if (t1 < t2)
-				{
-					intersectPoint = intersect1;
-				}
-				if (t1 >= t2)
-				{
-					intersectPoint = intersect2;
-				}
-				t = min(t1, t2);
-			}
-			else if (t1Valid)
-			{
-				t = t1;
-				intersectPoint = intersect1;
-			}
-			else if (t2Valid)
-			{
-				t = t2;
-				intersectPoint = intersect2;
-			}
-
-			if (level == 0)
-				return t;
-
-			Vector3D normal(
-				2 * A * intersectPoint.x + D * intersectPoint.y + E * intersectPoint.z + G,
-				2 * B * intersectPoint.y + D * intersectPoint.x + F * intersectPoint.z + H,
-				2 * C * intersectPoint.z + E * intersectPoint.x + F * intersectPoint.y + I);
-
-			normal = normalize(normal);
-
-			double intensity[3] = {coefficients[0], coefficients[0], coefficients[0]};
-
-			double totalSpecularIntensity[3] = {0, 0, 0};
-			for (int i = 0; i < lights.size(); i++)
-			{
-				// Diffuse
-				Vector3D L = vectorSub(intersectPoint, lights[i].light_pos);
-				L = normalize(L);
-				double diffuseIntensity = -1 * coefficients[1] * vectorDot(L, normal);
-
-				// Specular
-				Vector3D H = scale(vectorAdd(L, ray.dir), 0.5);
-				H = normalize(H);
-				double specDot = vectorDot(normal, H);
-				int sign = 1;
-				if (specDot < 0)
-					sign = -1;
-				specDot *= sign;
-				double specularIntensity = -coefficients[2] * sign * power(specDot, shine);
-
-				//cout << specularIntensity << endl;
-
-				for (int j = 0; j < 3; j++)
-				{
-					intensity[j] += max(0.0, diffuseIntensity) * lights[i].color[j];
-					totalSpecularIntensity[j] += max(0.0, specularIntensity) * lights[i].color[j];
-				}
-			}
-
-			for (int i = 0; i < 3; i++)
-			{
-				color[i] = min(1.0, this->color[i] * intensity[i] + totalSpecularIntensity[i]);
-				color[i] = max(color[i], 0.0);
-			}
-
-			return t;
-		}
+		virtual float intersect(Ray ray, double *color, int level);
 
 };
 
 // declaration
 extern double imageWidth, imageHeight;
 extern vector <Object*> objects;
+
+float Object::intersect(Ray ray, double* color, int level){
+	double t_2_coeff = A * (ray.dir.x * ray.dir.x) +
+					   B * (ray.dir.y * ray.dir.y) +
+					   C * (ray.dir.z * ray.dir.z) +
+					   D * (ray.dir.x * ray.dir.y) +
+					   E * (ray.dir.x * ray.dir.z) +
+					   F * (ray.dir.y * ray.dir.z);
+
+	double t_coeff = 2 * A * (ray.start.x * ray.dir.x) +
+					 2 * B * (ray.start.y * ray.dir.y) +
+					 2 * C * (ray.start.z * ray.dir.z) +
+					 1 * D * (ray.start.x * ray.dir.y) +
+					 1 * D * (ray.start.y * ray.dir.x) +
+					 1 * E * (ray.start.x * ray.dir.z) +
+					 1 * E * (ray.start.z * ray.dir.x) +
+					 1 * F * (ray.start.y * ray.dir.z) +
+					 1 * F * (ray.start.z * ray.dir.y) +
+					 1 * G * (ray.dir.x) +
+					 1 * H * (ray.dir.y) +
+					 1 * I * (ray.dir.z);
+
+	double constant = A * (ray.start.x * ray.start.x) +
+					  B * (ray.start.y * ray.start.y) +
+					  C * (ray.start.z * ray.start.z) +
+					  D * (ray.start.x * ray.start.y) +
+					  E * (ray.start.x * ray.start.z) +
+					  F * (ray.start.y * ray.start.z) +
+					  G * (ray.start.x) +
+					  H * (ray.start.y) +
+					  I * (ray.start.z) +
+					  J;
+
+	double descriminant = (t_coeff * t_coeff) - 4 * t_2_coeff * constant;
+	if (descriminant < 0)
+		return -1;
+
+	double t1 = (-t_coeff + sqrt(descriminant)) / (2 * t_2_coeff);
+	double t2 = (-t_coeff - sqrt(descriminant)) / (2 * t_2_coeff);
+
+	Vector3D intersect1 = vectorAdd(ray.start, scale(ray.dir, t1));
+	Vector3D intersect2 = vectorAdd(ray.start, scale(ray.dir, t2));
+
+	bool t1Valid = t1 >= 0;
+	bool t2Valid = t2 >= 0;
+	if (round(length * 100) != 0 && abs(intersect1.x - reference_point.x) > length)
+	{
+		t1Valid = false;
+	}
+	else if (round(width * 100) != 0 && abs(intersect1.y - reference_point.y) > width)
+	{
+		t1Valid = false;
+	}
+	else if (round(height * 100) != 0 && abs(intersect1.z - reference_point.z) > height)
+	{
+		t1Valid = false;
+	}
+
+	if (round(length * 100) != 0 && abs(intersect2.x - reference_point.x) > length)
+	{
+		t2Valid = false;
+	}
+	else if (round(100 * width) != 0 && abs(intersect2.y - reference_point.y) > width)
+	{
+		t2Valid = false;
+	}
+	else if (round(100 * height) != 0 && abs(intersect2.z - reference_point.z) > height)
+	{
+		t2Valid = false;
+	}
+
+	double t = -1;
+	Vector3D intersectPoint;
+	if (!t1Valid && !t2Valid)
+		return t;
+	if (t1Valid && t2Valid)
+	{
+		if (t1 < t2)
+		{
+			intersectPoint = intersect1;
+		}
+		if (t1 >= t2)
+		{
+			intersectPoint = intersect2;
+		}
+		t = min(t1, t2);
+	}
+	else if (t1Valid)
+	{
+		t = t1;
+		intersectPoint = intersect1;
+	}
+	else if (t2Valid)
+	{
+		t = t2;
+		intersectPoint = intersect2;
+	}
+
+	if (level == 0)
+		return t;
+
+	Vector3D normal(
+		2 * A * intersectPoint.x + D * intersectPoint.y + E * intersectPoint.z + G,
+		2 * B * intersectPoint.y + D * intersectPoint.x + F * intersectPoint.z + H,
+		2 * C * intersectPoint.z + E * intersectPoint.x + F * intersectPoint.y + I);
+
+	normal = normalize(normal);
+
+	double intensity[3] = {coefficients[0], coefficients[0], coefficients[0]};
+
+	double totalSpecularIntensity[3] = {0, 0, 0};
+	for (int i = 0; i < lights.size(); i++)
+	{
+		// Diffuse
+		Vector3D L = vectorSub(intersectPoint, lights[i].light_pos);
+		L = normalize(L);
+		double diffuseIntensity = -1 * coefficients[1] * vectorDot(L, normal);
+
+		// Specular
+		Vector3D H = scale(vectorAdd(L, ray.dir), 0.5);
+		H = normalize(H);
+		double specDot = vectorDot(normal, H);
+		int sign = 1;
+		if (specDot < 0)
+			sign = -1;
+		specDot *= sign;
+		double specularIntensity = -coefficients[2] * sign * power(specDot, shine);
+
+		//cout << specularIntensity << endl;
+
+		for (int j = 0; j < 3; j++)
+		{
+			intensity[j] += max(0.0, diffuseIntensity) * lights[i].color[j];
+			totalSpecularIntensity[j] += max(0.0, specularIntensity) * lights[i].color[j];
+		}
+	}
+
+	for (int i = 0; i < 3; i++)
+	{
+		color[i] = min(1.0, this->color[i] * intensity[i] + totalSpecularIntensity[i]);
+		color[i] = max(color[i], 0.0);
+	}
+
+	Vector3D reflectionDir = vectorSub(ray.dir, scale(normal, 2 * vectorDot(ray.dir, normal)));
+	reflectionDir = normalize(reflectionDir);
+	Ray reflectRay(vectorAdd(intersectPoint, scale(reflectionDir, 0.2)), reflectionDir);
+	//print(reflectionDir, "\n\nreflect dir");
+	//print(intersectionPoint, "\n\nintersect point");
+	//print(reference_point, "\n\nreference point");
+
+	float minT = -1;
+	int nearest = -1;
+	for (int k = 0; k < objects.size(); k++)
+	{
+		if (this == objects[k])
+			continue;
+		double *dummyColor = new double[3];
+		float newT = objects[k]->intersect(reflectRay, dummyColor, 0);
+		if ((nearest == -1 || newT < minT) && newT > 0)
+		{
+			nearest = k;
+			minT = newT;
+		}
+	}
+	if (minT > 0)
+	{
+		double *nextColor = new double[3];
+		minT = objects[nearest]->intersect(reflectRay, nextColor, level + 1);
+		for (int i = 0; i < 3; i++)
+		{
+			//cout << nextColor[i] << " nextcolor \n";
+			color[i] += nextColor[i] * coefficients[3];
+			color[i] = min(color[i], 1.0);
+			color[i] = max(color[i], 0.0);
+		}
+	}
+	return t;
+		}
 
 class Sphere: public Object {
 	public:
@@ -376,7 +413,7 @@ class Sphere: public Object {
 			}
 		}
 
-		float intersect(Ray ray, double *color, int level){
+		float intersect(Ray ray, double *retColor, int level){
 			Vector3D newRayOrigin = vectorSub(ray.start, reference_point);
 			bool outside = true;
 			double dist = vectorDot(newRayOrigin, newRayOrigin);
@@ -415,10 +452,8 @@ class Sphere: public Object {
 			normal = normalize(normal);
 
 			Vector3D intersectionPoint = vectorAdd(
-				vectorAdd(
-					newRayOrigin,
-					scale(ray.dir, t)),
-				reference_point);
+					ray.start,
+					scale(ray.dir, t));
 
 			// Diffuse
 			double intensity[3] = {coefficients[0], coefficients[0], coefficients[0]};
@@ -452,10 +487,47 @@ class Sphere: public Object {
 
 			for (int i = 0; i < 3; i++)
 			{
-				color[i] = min(1.0, this->color[i] * intensity[i] + totalSpecularIntensity[i]);
-				color[i] = max(color[i], 0.0);
+				retColor[i] = min(1.0, this->color[i] * intensity[i] + totalSpecularIntensity[i]);
+				retColor[i] = max(retColor[i], 0.0);
 			}
+
+			if (level >= recursionLevel)
+				return t;
+
+			Vector3D reflectionDir = vectorSub(ray.dir, scale(normal, 2 * vectorDot(ray.dir, normal)));
+			reflectionDir = normalize(reflectionDir);
+			Ray reflectRay(vectorAdd(intersectionPoint, scale(reflectionDir, 0.2)), reflectionDir);
+			//print(reflectionDir, "\n\nreflect dir");
+			//print(intersectionPoint, "\n\nintersect point");
+			//print(reference_point, "\n\nreference point");
+
+			float minT = -1;
+			int nearest=-1;
+			for (int k=0; k<objects.size(); k++){
+				if (this == objects[k])continue;
+				double *dummyColor = new double[3];
+				float newT = objects[k]->intersect(reflectRay, dummyColor, 0);
+				if ((nearest == -1 ||  newT < minT) && newT > 0){
+					nearest = k;
+					minT = newT;
+				}
+
+			}
+			if (minT > 0){
+				double *nextColor = new double[3];
+				minT = objects[nearest]->intersect(reflectRay, nextColor, level+1);
+					for (int i = 0; i < 3; i++)
+					{
+						//cout << nextColor[i] << " nextcolor \n";
+						retColor[i] += nextColor[i] * coefficients[3];
+						retColor[i] = min(retColor[i], 1.0);
+						retColor[i] = max(retColor[i], 0.0);
+					}
+			}
+
 			return t;
+
+
 		}
 
 };
@@ -522,11 +594,10 @@ class Triangle: public Object {
 					return t;
 				Vector3D point = vectorAdd(
 					ray.start,
-					scale(ray.dir, t)
-				);
+					scale(ray.dir, t));
 				double intensity[3] = {coefficients[0], coefficients[0], coefficients[0]};
 
-				double totalSpecularIntensity[3] = {0,0,0};
+				double totalSpecularIntensity[3] = {0, 0, 0};
 				for (int i = 0; i < lights.size(); i++)
 				{
 					// Diffuse
@@ -556,6 +627,44 @@ class Triangle: public Object {
 					color[i] = min(1.0, this->color[i] * intensity[i] + totalSpecularIntensity[i]);
 					color[i] = max(color[i], 0.0);
 				}
+
+				if (level >= recursionLevel)
+					return t;
+
+				Vector3D reflectionDir = vectorSub(ray.dir, scale(normal, 2 * vectorDot(ray.dir, normal)));
+				reflectionDir = normalize(reflectionDir);
+				Ray reflectRay(vectorAdd(point, scale(reflectionDir, 0.2)), reflectionDir);
+				//print(reflectionDir, "\n\nreflect dir");
+				//print(intersectionPoint, "\n\nintersect point");
+				//print(reference_point, "\n\nreference point");
+
+				float minT = -1;
+				int nearest = -1;
+				for (int k = 0; k < objects.size(); k++)
+				{
+					if (this == objects[k])
+						continue;
+					double *dummyColor = new double[3];
+					float newT = objects[k]->intersect(reflectRay, dummyColor, 0);
+					if ((nearest == -1 || newT < minT) && newT > 0)
+					{
+						nearest = k;
+						minT = newT;
+					}
+				}
+				if (minT > 0)
+				{
+					double *nextColor = new double[3];
+					minT = objects[nearest]->intersect(reflectRay, nextColor, level + 1);
+					for (int i = 0; i < 3; i++)
+					{
+						//cout << nextColor[i] << " nextcolor \n";
+						color[i] += nextColor[i] * coefficients[3];
+						color[i] = min(color[i], 1.0);
+						color[i] = max(color[i], 0.0);
+					}
+				}
+
 				return t;
 			}
 			return -1;
@@ -636,9 +745,9 @@ public:
 		if (level == 0)
 			return t;
 
-		double intensity[3] = {0.4,0.4,0.4};
+		double intensity[3] = {0.4, 0.4, 0.4};
 
-		double totalSpecularIntensity[3] = {0,0,0};
+		double totalSpecularIntensity[3] = {0, 0, 0};
 		for (int i = 0; i < lights.size(); i++)
 		{
 			// Diffuse
@@ -668,6 +777,40 @@ public:
 			color[i] = min(1.0, color[i] * intensity[i] + totalSpecularIntensity[i]);
 			color[i] = max(color[i], 0.0);
 		}
+
+		Vector3D reflectionDir = vectorSub(ray.dir, scale(normal, 2 * vectorDot(ray.dir, normal)));
+		reflectionDir = normalize(reflectionDir);
+		Ray reflectRay(vectorAdd(intersectionPoint, scale(reflectionDir, 0.2)), reflectionDir);
+		//print(reflectionDir, "\n\nreflect dir");
+		//print(intersectionPoint, "\n\nintersect point");
+		//print(reference_point, "\n\nreference point");
+
+		float minT = -1;
+		int nearest = -1;
+		for (int k = 0; k < objects.size(); k++)
+		{
+			if (this == objects[k])
+				continue;
+			double *dummyColor = new double[3];
+			float newT = objects[k]->intersect(reflectRay, dummyColor, 0);
+			if ((nearest == -1 || newT < minT) && newT > 0)
+			{
+				nearest = k;
+				minT = newT;
+			}
+		}
+		if (minT > 0)
+		{
+			double *nextColor = new double[3];
+			minT = objects[nearest]->intersect(reflectRay, nextColor, level + 1);
+			for (int i = 0; i < 3; i++)
+			{
+				//cout << nextColor[i] << " nextcolor \n";
+				color[i] += nextColor[i] * 0.2;
+				color[i] = min(color[i], 1.0);
+				color[i] = max(color[i], 0.0);
+			}
+		}
 		return t;
 	}
 };
@@ -681,12 +824,12 @@ void loadData(){
 	string input;
 	getline(sceneInput, input);
 
-	int recursionLevel;
 	int resolution;
 	int objectCount;
 
 	stringstream lineRecursion(input);
 	lineRecursion >> recursionLevel;
+	cout << "REC " << recursionLevel;
 
 	getline(sceneInput, input);
 	stringstream lineRes(input);
@@ -842,6 +985,7 @@ void loadData(){
 	stringstream lineLightCnt(input);
 	int lightCount;
 	lineLightCnt >> lightCount;
+	cout << "Light Count " << lightCount << endl;
 
 	for (int i=0; i<lightCount; i++){
 		Light light;

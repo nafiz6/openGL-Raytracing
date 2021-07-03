@@ -436,17 +436,12 @@ void capture(){
 					minT = t;
 				}
 
-				//upadate t so it stones min +ve val??
-				// save nearest obj??
-
 			}
 			if (minT > 0){
 				minT = objects[nearest]->intersect(ray, color, 1);
 				//cout << color[0] << " " << color[1] << " " << color[2] << endl;
 				image.set_pixel(i, j, 255 * color[0], 255 * color[1], 255 * color[2]);
 			}
-			//tmin = on->intersect(ray, color, 1);
-			//update image pixel (i,j);
 
 		}
 	}
