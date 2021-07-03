@@ -615,9 +615,12 @@ void display(){
 	drawAxes();
 	drawGrid();
 	for (int i=0; i<objects.size(); i++){
-		Object *sphere = objects[i];
-		sphere->draw();
+		Object *object = objects[i];
+		object->draw();
+	}
 
+	for (int i=0; i<lights.size(); i++){
+		lights[i].draw();
 	}
 
     //glColor3f(1,0,0);
