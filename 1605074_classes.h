@@ -28,6 +28,10 @@ Vector3D crossProduct(Vector3D a, Vector3D b){
 	return res;
 }
 
+float vectorDot(Vector3D a, Vector3D b){
+	return (a.x * b.x) + (a.y * b.y) + (a.z * b.z);
+}
+
 Vector3D vectorSub(Vector3D a, Vector3D b){
 	Vector3D res;
 	res.x = a.x - b.x;
@@ -75,7 +79,7 @@ void rotate(Vector3D* target, Vector3D normal, double deg){
 }
 
 void print(Vector3D a, string name){
-	//cout << name << ": " << a.x  << " " << a.y << " " << a.z << " ";
+	cout << name << ": " << a.x  << " " << a.y << " " << a.z << " ";
 }
 
 
@@ -90,9 +94,7 @@ public:
 		start.y = s.y;
 		start.z = s.z;
 
-		dir.x = d.x;
-		dir.y = d.y;
-		dir.z= d.z;
+		dir = normalize(d);
 	}
 
 };
@@ -131,8 +133,8 @@ class Object {
 			coefficients[3] = c[3];
 		}
 
-		virtual Vector3D intersect(Ray ray, double *color, int recursion){
-
+		virtual float intersect(Ray ray, double *color, int level){
+			return -1;
 		}
 
 };
@@ -190,6 +192,36 @@ class Sphere: public Object {
 			}
 		}
 
+		float intersect(Ray ray, double *color, int level){
+			Vector3D newRayOrigin = vectorSub(ray.start, reference_point);
+			bool outside = true;
+			double dist = vectorDot(newRayOrigin, newRayOrigin);
+
+			if (dist < length * length){
+				outside = false;
+			}
+			double tp = -vectorDot(newRayOrigin, ray.dir);
+
+			if (outside && tp < 0)return -1;
+
+			double closestDist = dist - tp * tp;
+			if (closestDist > length * length)return -1;
+
+			double tBar_2 = length * length - closestDist;
+
+			color[0] = this->color[0];
+			color[1] = this->color[1];
+			color[2] = this->color[2];
+
+			if (outside){
+				
+				return tp - sqrt(tBar_2);
+			}
+			else{
+				return tp + sqrt(tBar_2);
+			}
+		}
+
 };
 
 class Triangle: public Object {
@@ -213,39 +245,81 @@ class Triangle: public Object {
 			glEnd();
 		}
 
+		float intersect(Ray ray, double *color, int level){
+			return -1;
+		}
+
 };
 
 class Floor: public Object{
 public:
 	int tileCount;
-	Floor(int floorWidth, int tileWidth){
-		reference_point = Vector3D(-floorWidth/2, -floorWidth/2, 0);
+	Floor(int floorWidth, int tileWidth)
+	{
+		reference_point = Vector3D(-floorWidth / 2, -floorWidth / 2, 0);
 		length = tileWidth;
 		tileCount = floorWidth / tileWidth;
-
 	}
 
-	void draw(){
-		for (int i=0; i<tileCount; i++){
-			for (int j=0; j<tileCount; j++){
-				if (((i+j) % 2) == 0){
-					glColor3f(1,1,1);
+	void draw()
+	{
+		for (int i = 0; i < tileCount; i++)
+		{
+			for (int j = 0; j < tileCount; j++)
+			{
+				if (((i + j) % 2) == 0)
+				{
+					glColor3f(1, 1, 1);
 				}
-				else{
-					glColor3f(0,0,0);
+				else
+				{
+					glColor3f(0, 0, 0);
 				}
 				glBegin(GL_QUADS);
 				{
-					glVertex3f(reference_point.x + i*length, reference_point.y + j*length, 0);
-					glVertex3f(reference_point.x + (i+1)*length, reference_point.y + j*length, 0);
-					glVertex3f(reference_point.x + (i+1)*length, reference_point.y + (j+1)*length, 0);
-					glVertex3f(reference_point.x + i*length, reference_point.y + (j+1)*length, 0);
+					glVertex3f(reference_point.x + i * length, reference_point.y + j * length, 0);
+					glVertex3f(reference_point.x + (i + 1) * length, reference_point.y + j * length, 0);
+					glVertex3f(reference_point.x + (i + 1) * length, reference_point.y + (j + 1) * length, 0);
+					glVertex3f(reference_point.x + i * length, reference_point.y + (j + 1) * length, 0);
 				}
 				glEnd();
 			}
 		}
 	}
+	float intersect(Ray ray, double *color, int level)
+	{
+		Vector3D normal = Vector3D(0,0,1);
+		float div =  vectorDot(normal, ray.dir);
+		if (round(div*100) == 0)return -1;
+		float t =  -(vectorDot(normal, ray.start)) / div;
+		//cout << "T" <<  t << endl;
 
+		Vector3D intersectionPoint = vectorAdd(ray.start, scale(ray.dir, t));
+
+		//print(intersectionPoint, "intersectionPoint\n\n");
+		//print(ray.dir, "rayDir\n\n");
+		if (abs(intersectionPoint.x) > abs(reference_point.x) 
+			|| abs(intersectionPoint.y) > abs(reference_point.y))
+			return -1;
+		
+		int tileX = (intersectionPoint.x - reference_point.x) / length;
+		int tileY = (intersectionPoint.y - reference_point.y) / length;
+
+		if ( ((tileX + tileY)%2) == 0){
+			color[0] = 1;
+			color[1] = 1;
+			color[2] = 1;
+		}
+		else{
+			color[0] = 0;
+			color[1] = 0;
+			color[2] = 0;
+
+		}
+		return t;
+
+
+	}
 };
 
 class Light {

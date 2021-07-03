@@ -24,6 +24,7 @@ double imageWidth, imageHeight;
 
 vector <Object*> objects;
 vector <Light> lights;
+bitmap_image image;
 
 double cameraHeight;
 double cameraAngle;
@@ -377,16 +378,25 @@ void drawSphere(double radius,int slices,int stacks)
 
 void capture(){
 	cout << "Capturing\n" << flush;
-    bitmap_image image(windowWidth, windowHeight);
-	double planeDistance = (windowHeight / 2.0) / tan(viewAngle / 2.0);
+    // initialize as black
+    for (int i = 0; i < imageWidth; i++)
+    {
+        for (int j = 0; j < imageHeight; j++)
+        {
+            image.set_pixel(i, j, 0, 0, 0);
+        }
+    }
 
-	Vector3D rightVector = crossProduct(camera.lookPosition, camera.upVector);
+
+	double planeDistance = (windowHeight / 2.0) / tan((pi * viewAngle) / (2.0*180));
+
+	Vector3D rightVector = normalize(crossProduct(camera.lookVector, camera.upVector));
 	Vector3D topLeft = vectorAdd(camera.position,
-		vectorAdd( 
-			vectorSub(scale(camera.lookVector, planeDistance), 
-					  scale(rightVector, windowWidth / 2.0)), 
-			scale(camera.upVector, windowHeight / 2.0)
-		)
+								vectorAdd( 
+									vectorSub(scale(normalize(camera.lookVector), planeDistance), 
+											scale(rightVector, windowWidth / 2.0)), 
+									scale(normalize(camera.upVector), windowHeight / 2.0)
+								)
 	);
 
 	double du = windowWidth / imageWidth;
@@ -400,7 +410,6 @@ void capture(){
 				)
 			);
 	
-	int nearest;
 	double t, tMin;
 
 	for (int i=1; i<imageWidth; i++){
@@ -414,19 +423,34 @@ void capture(){
 			);
 			Ray ray = Ray(camera.position, vectorSub(curPixel, camera.position));
 			double *color = new double[3];
+			color[0] = 1;
+			color[1] = 0;
+			color[2] = 0;
+			float minT = -1;
+			int nearest=-1;
 			for (int k=0; k<objects.size(); k++){
 				double *dummyColor = new double[3];
-				Vector3D t = objects[k]->intersect(ray, dummyColor, 0);
+				float t = objects[k]->intersect(ray, dummyColor, 0);
+				if ((nearest == -1 ||  t < minT) && t != -1){
+					nearest = k;
+					minT = t;
+				}
 
 				//upadate t so it stones min +ve val??
 				// save nearest obj??
 
+			}
+			if (minT > 0){
+				minT = objects[nearest]->intersect(ray, color, 1);
+				//cout << color[0] << " " << color[1] << " " << color[2] << endl;
+				image.set_pixel(i, j, 255 * color[0], 255 * color[1], 255 * color[2]);
 			}
 			//tmin = on->intersect(ray, color, 1);
 			//update image pixel (i,j);
 
 		}
 	}
+	cout << "capturing complete" << endl;
     image.save_image("out.bmp");
 
 
@@ -652,6 +676,7 @@ void init(){
 	//far distance
 	loadData();
 	//cout << "CALLED" << std::flush;
+	image = bitmap_image(imageWidth, imageHeight);
 
 }
 
