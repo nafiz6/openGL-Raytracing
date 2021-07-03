@@ -431,7 +431,7 @@ void capture(){
 			for (int k=0; k<objects.size(); k++){
 				double *dummyColor = new double[3];
 				float t = objects[k]->intersect(ray, dummyColor, 0);
-				if ((nearest == -1 ||  t < minT) && t != -1){
+				if ((nearest == -1 ||  t < minT) && t > 0){
 					nearest = k;
 					minT = t;
 				}

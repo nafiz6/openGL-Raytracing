@@ -82,6 +82,14 @@ void print(Vector3D a, string name){
 	cout << name << ": " << a.x  << " " << a.y << " " << a.z << " ";
 }
 
+double determinant(double mat[3][3]){
+	double a = mat[0][0] * (mat[1][1] * mat[2][2] - mat[1][2] * mat[2][1]);
+	double b = mat[0][1] * (mat[1][0] * mat[2][2] - mat[1][2] * mat[2][0]);
+	double c = mat[0][2] * (mat[1][0] * mat[2][1] - mat[1][1] * mat[2][0]);
+
+	return a - b + c;
+}
+
 
 class Ray {
 public:
@@ -107,7 +115,7 @@ class Object {
 		double color[3];
 		double coefficients[4]; // reflection coefficients
 		int shine; // exponent term of specular component
-		int A,B,C,D,E,F,G,H,I,J;
+		double A,B,C,D,E,F,G,H,I,J;
 
 		Object(){
 			cout << "Drawing obj\n";
@@ -134,7 +142,49 @@ class Object {
 		}
 
 		virtual float intersect(Ray ray, double *color, int level){
-			return -1;
+			double t_2_coeff = A * (ray.dir.x * ray.dir.x) + 
+							   B * (ray.dir.y * ray.dir.y) +
+							   C * (ray.dir.z * ray.dir.z) +
+							   D * (ray.dir.x * ray.dir.y) + 
+							   E * (ray.dir.x * ray.dir.z) + 
+							   F * (ray.dir.y * ray.dir.z);
+			
+			double t_coeff = 2 * A * (ray.start.x * ray.dir.x) + 
+							 2 * B * (ray.start.y * ray.dir.y) + 
+							 2 * C * (ray.start.z * ray.dir.z) + 
+							 1 * D * (ray.start.x * ray.dir.y) + 
+							 1 * D * (ray.start.y * ray.dir.x) + 
+							 1 * E * (ray.start.x * ray.dir.z) + 
+							 1 * E * (ray.start.z * ray.dir.x) + 
+							 1 * F * (ray.start.y * ray.dir.z) + 
+							 1 * F * (ray.start.z * ray.dir.y) + 
+							 1 * G * ( ray.dir.x) + 
+							 1 * H * ( ray.dir.y) + 
+							 1 * I * ( ray.dir.z);
+
+			double constant =  A * (ray.start.x * ray.start.x) +
+							   B * (ray.start.y * ray.start.y) +
+							   C * (ray.start.z * ray.start.z) +
+							   D * (ray.start.x * ray.start.y) +
+							   E * (ray.start.x * ray.start.z) +
+							   F * (ray.start.y * ray.start.z) +
+							   G * (ray.start.x) +
+							   H * (ray.start.y) +
+							   I * (ray.start.z) +
+							   J;
+			
+			double descriminant = (t_coeff * t_coeff) - 4 * t_2_coeff * constant;
+			if (descriminant < 0)return -1;
+			
+			double t1 = - (t_coeff + sqrt(descriminant) ) / ( 2 * t_2_coeff);
+			double t2 = - (t_coeff - sqrt(descriminant) ) / ( 2 * t_2_coeff);
+
+			double t = min(t1, t2);
+			color[0] = this->color[0];
+			color[1] = this->color[1];
+			color[2] = this->color[2];
+			return t;
+
 		}
 
 };
@@ -246,7 +296,46 @@ class Triangle: public Object {
 		}
 
 		float intersect(Ray ray, double *color, int level){
+			double betaMat[3][3] = {
+				{a.x - ray.start.x, a.x - c.x, ray.dir.x},
+				{a.y - ray.start.y, a.y - c.y, ray.dir.y},
+				{a.z - ray.start.z, a.z - c.z, ray.dir.z}
+			};
+			double gammaMat[3][3] = {
+				{a.x - b.x, a.x - ray.start.x, ray.dir.x},
+				{a.y - b.y, a.y - ray.start.y, ray.dir.y},
+				{a.z - b.z, a.z - ray.start.z, ray.dir.z}
+			};
+			double tMat[3][3] = {
+				{a.x - b.x, a.x - c.x, a.x - ray.start.x},
+				{a.y - b.y, a.y - c.y, a.y - ray.start.y},
+				{a.z - b.z, a.z - c.z, a.z - ray.start.z}
+			};
+			double AMat[3][3] {
+				{a.x - b.x, a.x - c.x, ray.dir.x},
+				{a.y - b.y, a.y - c.y, ray.dir.y},
+				{a.z - b.z, a.z - c.z, ray.dir.z}
+			};
+
+
+			double Adet = determinant(AMat);
+
+			double beta = determinant(betaMat) / Adet;
+			double gamma = determinant(gammaMat) / Adet;
+			double t = determinant(tMat) / Adet;
+
+			//cout << Adet << beta << gamma << t << endl;
+
+			if (beta + gamma < 1 && beta > 0 && gamma > 0 && t > 0){
+				color[0] = this->color[0];
+				color[1] = this->color[1];
+				color[2] = this->color[2];
+				return t;
+			}
 			return -1;
+
+
+
 		}
 
 };
@@ -298,8 +387,8 @@ public:
 
 		//print(intersectionPoint, "intersectionPoint\n\n");
 		//print(ray.dir, "rayDir\n\n");
-		if (abs(intersectionPoint.x) > abs(reference_point.x) 
-			|| abs(intersectionPoint.y) > abs(reference_point.y))
+		if ((intersectionPoint.x) >= abs(reference_point.x) || intersectionPoint.x <= reference_point.x
+			|| (intersectionPoint.y) >= abs(reference_point.y) || intersectionPoint.y <= reference_point.y)
 			return -1;
 		
 		int tileX = (intersectionPoint.x - reference_point.x) / length;
@@ -461,6 +550,7 @@ void loadData(){
 			lineEqn >> object->J;
 
 
+
 			getline(sceneInput, input);
 			stringstream lineRef(input);
 			lineRef >> object->reference_point.x;
@@ -484,6 +574,7 @@ void loadData(){
 			stringstream lineShiny(input);
 			lineShiny >> object->shine;
 
+			cout << "A" << object->A << endl;
 			objects.push_back(object);
 
 
