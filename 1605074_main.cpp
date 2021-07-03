@@ -8,13 +8,18 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+
 #include "1605074_classes.h"
+#include "bitmap_image.hpp"
 
 #define pi (2*acos(0.0))
 
 using namespace std;
 
 
+double windowWidth = 500;
+double windowHeight = 500;
+double imageWidth, imageHeight;
 
 
 vector <Object*> objects;
@@ -25,62 +30,17 @@ double cameraAngle;
 int drawgrid;
 int drawaxes;
 double angle;
+double viewAngle = 80;
 
-struct point
-{
-	double x,y,z;
-};
-
-point crossProduct(point a, point b){
-	struct point res;
-	res.x = a.y*b.z - a.z*b.y;
-	res.y = -(a.x*b.z - a.z*b.x);
-	res.z = a.x*b.y - a.y*b.x;
-	return res;
-}
-
-double magnitude(point a){
-	return sqrt(a.x*a.x + a.y*a.y + a.z*a.z);
-}
-
-point normalize(point a){
-	struct point res;
-	double mag = magnitude(a);
-	res.x = a.x / mag;
-	res.y = a.y / mag;
-	res.z = a.z / mag;
-	return res;
-}
-
-point scale(point vec, double val){
-	struct point res;
-	res.x = vec.x * val;
-	res.y = vec.y * val;
-	res.z = vec.z * val;
-	return res;
-}
-
-void rotate(point* target, point normal, double deg){
-	struct point right = normalize(crossProduct(*target, normal));
-	right = scale(right, magnitude(*target));
-
-	target->x = target->x * cos(deg) + right.x * sin(deg);
-	target->y = target->y * cos(deg) + right.y * sin(deg);
-	target->z = target->z * cos(deg) + right.z * sin(deg);
-}
-
-void print(point a, string name){
-	//cout << name << ": " << a.x  << " " << a.y << " " << a.z << " ";
-}
 
 
 class Camera {
 	int mag = 2;
 	public:
-	 struct point position;
-	 struct point lookPosition;
-	 struct point upVector;
-	 struct point lookVector;
+	 Vector3D position;
+	 Vector3D lookPosition;
+	 Vector3D upVector;
+	 Vector3D lookVector;
 
 	 void updateCamera(){
 		 lookPosition.x = position.x + lookVector.x;
@@ -91,20 +51,20 @@ class Camera {
 	 Camera(){
 		 position.x = 200;
 		 position.y = 0;
-		 position.z = 0;
+		 position.z = 10;
 
 		 lookVector.x = -200;
 		 lookVector.y = -0;
-		 lookVector.z = -0;
+		 lookVector.z = -10;
 
 		 upVector.x = 0;
-		 upVector.y = 1;
-		 upVector.z = 0;
+		 upVector.y = 0;
+		 upVector.z = 1;
 		 updateCamera();
 	 }
 
 	 void moveForward(int dir){
-		 struct point normalisedLook = normalize(lookVector);
+		 Vector3D normalisedLook = normalize(lookVector);
 		 dir*=mag;
 
 		 position.x -= normalisedLook.x*dir;
@@ -115,7 +75,7 @@ class Camera {
 	 }
 
 	 void moveLR(int dir){
-		 struct point lr = normalize(crossProduct(lookVector, upVector));
+		 Vector3D lr = normalize(crossProduct(lookVector, upVector));
 		 dir*=mag;
 		 position.x += lr.x * dir;
 		 position.y += lr.y * dir;
@@ -142,7 +102,7 @@ class Camera {
 
 	 void rotateUD(int dir){
 		 double degree = -3 * dir * pi /180.0;
-		 struct point right = normalize(crossProduct(lookVector, upVector));
+		 Vector3D right = normalize(crossProduct(lookVector, upVector));
 		 rotate(&lookVector, right, degree);
 		 rotate(&upVector, right, degree);
 
@@ -159,10 +119,10 @@ class Camera {
 
 
 Camera camera;
-vector<point> bullets;
+vector<Vector3D> bullets;
 
-point bulletCollision(){
-	point res;
+Vector3D bulletCollision(){
+	Vector3D res;
 //	res.x = tan((-cylinder.angleY - rBall.angleY)*pi / 180.0) * (800 - rBall.radius);
 	//res.y = tan((cylinder.angleX + rBall.angleX)*pi / 180.0) * (800 - rBall.radius);
 	res.z = 800 - 3;
@@ -230,7 +190,7 @@ void drawSquare(double a)
 void drawCircle(double radius,int segments)
 {
     int i;
-    struct point points[100];
+    Vector3D points[100];
     glColor3f(0.7,0.7,0.7);
     //generate points
     for(i=0;i<=segments;i++)
@@ -254,7 +214,7 @@ void drawCone(double radius,double height,int segments)
 {
     int i;
     double shade;
-    struct point points[100];
+    Vector3D points[100];
     //generate points
     for(i=0;i<=segments;i++)
     {
@@ -283,7 +243,7 @@ void drawCone(double radius,double height,int segments)
 void drawCenterSphere(int type, double radius){
 	int slices = 60;
 	int stacks = 20;
-	struct point points[100][100];
+	Vector3D points[100][100];
 	int i,j;
 	double h,r;
 	//generate points
@@ -334,7 +294,7 @@ void drawCenterSphere(int type, double radius){
 void drawCenterConvex(double radius){
 	int slices = 60;
 	int stacks = 20;
-	struct point points[100][100];
+	Vector3D points[100][100];
 	int i,j;
 	double h,r,r2;
 	//generate points
@@ -376,7 +336,7 @@ void drawCenterConvex(double radius){
 
 void drawSphere(double radius,int slices,int stacks)
 {
-	struct point points[100][100];
+	Vector3D points[100][100];
 	int i,j;
 	double h,r;
 	//generate points
@@ -414,26 +374,70 @@ void drawSphere(double radius,int slices,int stacks)
 }
 
 
-void drawSS()
-{
-	/*
-	glColor3f(1, 0, 0);
-	//left center ball
-	glPushMatrix();
-	{
-		glRotatef(0, 1, 0, 0);
-		glRotatef(0, 0, 1, 0);
-		glRotatef(0, 0, 0, 1);
-		drawCenterSphere(1, 10);
+
+void capture(){
+	cout << "Capturing\n" << flush;
+    bitmap_image image(windowWidth, windowHeight);
+	double planeDistance = (windowHeight / 2.0) / tan(viewAngle / 2.0);
+
+	Vector3D rightVector = crossProduct(camera.lookPosition, camera.upVector);
+	Vector3D topLeft = vectorAdd(camera.position,
+		vectorAdd( 
+			vectorSub(scale(camera.lookVector, planeDistance), 
+					  scale(rightVector, windowWidth / 2.0)), 
+			scale(camera.upVector, windowHeight / 2.0)
+		)
+	);
+
+	double du = windowWidth / imageWidth;
+	double dv = windowHeight / imageHeight;
+
+	topLeft = vectorAdd(
+				topLeft, 
+				vectorSub(
+					scale(rightVector, 0.5 * du),
+					scale(camera.upVector, 0.5 * dv)
+				)
+			);
+	
+	int nearest;
+	double t, tMin;
+
+	for (int i=1; i<imageWidth; i++){
+		for (int j=1; j<imageHeight; j++){
+			Vector3D curPixel = vectorAdd(
+				topLeft,
+				vectorSub(
+					scale(rightVector, i * du),
+					scale(camera.upVector, j * dv)
+				)
+			);
+			Ray ray = Ray(camera.position, vectorSub(curPixel, camera.position));
+			double *color = new double[3];
+			for (int k=0; k<objects.size(); k++){
+				double *dummyColor = new double[3];
+				Vector3D t = objects[k]->intersect(ray, dummyColor, 0);
+
+				//upadate t so it stones min +ve val??
+				// save nearest obj??
+
+			}
+			//tmin = on->intersect(ray, color, 1);
+			//update image pixel (i,j);
+
+		}
 	}
-	glPopMatrix();
-	*/
+    image.save_image("out.bmp");
+
 
 }
 
 void keyboardListener(unsigned char key, int x,int y){
 	switch(key){
 
+		case '0':
+			capture();
+			break;
 		case '1':
 			camera.rotateLR(1);
 			break;
@@ -520,7 +524,7 @@ void mouseListener(int button, int state, int x, int y){	//x, y is the x-y of th
 		case GLUT_LEFT_BUTTON:
 			if(state == GLUT_DOWN){		// 2 times?? in ONE click? -- solution is checking DOWN or UP
 				//shoot
-				point bullet = bulletCollision();	
+				Vector3D bullet = bulletCollision();	
 				if (bullet.x <= 400 && bullet.x >=-400 && bullet.y <= 400 && bullet.y >= -400){
 					bullets.push_back(bullet);
 					//cout << "BULLET PUSHED" << endl;
@@ -612,10 +616,10 @@ void display(){
 
 
 void animate(){
-	angle+=0.05;
 	//codes for any changes in Models, Camera
 	glutPostRedisplay();
 }
+
 
 void init(){
 	//codes for initialization
@@ -641,7 +645,7 @@ void init(){
 	glLoadIdentity();
 
 	//give PERSPECTIVE parameters
-	gluPerspective(80,	1,	1,	1000.0);
+	gluPerspective(viewAngle,	1,	1,	1000.0);
 	//field of view in the Y (vertically)
 	//aspect ratio that determines the field of view in the X direction (horizontally)
 	//near distance
@@ -654,7 +658,7 @@ void init(){
 int main(int argc, char **argv){
 
 	glutInit(&argc,argv);
-	glutInitWindowSize(500, 500);
+	glutInitWindowSize(windowWidth, windowHeight);
 	glutInitWindowPosition(0, 0);
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGB);	//Depth, Double buffer, RGB color
 

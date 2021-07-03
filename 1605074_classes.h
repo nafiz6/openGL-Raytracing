@@ -8,6 +8,7 @@
 using namespace std;
 #define pi (2*acos(0.0))
 
+
 class Vector3D {
 	public:
 		double x,y,z;
@@ -19,33 +20,119 @@ class Vector3D {
 		Vector3D(){};
 };
 
+Vector3D crossProduct(Vector3D a, Vector3D b){
+	Vector3D res;
+	res.x = a.y*b.z - a.z*b.y;
+	res.y = -(a.x*b.z - a.z*b.x);
+	res.z = a.x*b.y - a.y*b.x;
+	return res;
+}
+
+Vector3D vectorSub(Vector3D a, Vector3D b){
+	Vector3D res;
+	res.x = a.x - b.x;
+	res.y = a.y - b.y;
+	res.z = a.z - b.z;
+	return res;
+}
+
+Vector3D vectorAdd(Vector3D a, Vector3D b){
+	Vector3D res;
+	res.x = a.x + b.x;
+	res.y = a.y + b.y;
+	res.z = a.z + b.z;
+	return res;
+}
+
+double magnitude(Vector3D a){
+	return sqrt(a.x*a.x + a.y*a.y + a.z*a.z);
+}
+
+Vector3D normalize(Vector3D a){
+	Vector3D res;
+	double mag = magnitude(a);
+	res.x = a.x / mag;
+	res.y = a.y / mag;
+	res.z = a.z / mag;
+	return res;
+}
+
+Vector3D scale(Vector3D vec, double val){
+	Vector3D res;
+	res.x = vec.x * val;
+	res.y = vec.y * val;
+	res.z = vec.z * val;
+	return res;
+}
+
+void rotate(Vector3D* target, Vector3D normal, double deg){
+	Vector3D right = normalize(crossProduct(*target, normal));
+	right = scale(right, magnitude(*target));
+
+	target->x = target->x * cos(deg) + right.x * sin(deg);
+	target->y = target->y * cos(deg) + right.y * sin(deg);
+	target->z = target->z * cos(deg) + right.z * sin(deg);
+}
+
+void print(Vector3D a, string name){
+	//cout << name << ": " << a.x  << " " << a.y << " " << a.z << " ";
+}
+
+
+class Ray {
+public:
+	Vector3D start;
+	Vector3D dir;
+
+	Ray(){};
+	Ray(Vector3D s, Vector3D d){
+		start.x = s.x;
+		start.y = s.y;
+		start.z = s.z;
+
+		dir.x = d.x;
+		dir.y = d.y;
+		dir.z= d.z;
+	}
+
+};
+
 class Object {
 	public:
-		Vector3D reference_point;
 		Vector3D a, b, c;
+		Vector3D reference_point;
 		double height, width, length;
 		double color[3];
 		double coefficients[4]; // reflection coefficients
 		int shine; // exponent term of specular component
 		int A,B,C,D,E,F,G,H,I,J;
+
 		Object(){
 			cout << "Drawing obj\n";
 		}
+
 		virtual void draw(){
 		}
+
 		void setColor(double c[]){
 			color[0] = c[0];
 			color[1] = c[1];
 			color[2] = c[2];
 		}
+		
 		void setShine(int s){
 			shine = s;
 		}
+
 		void setCoEfficients(double c[]){
 			coefficients[0] = c[0];
 			coefficients[1] = c[1];
 			coefficients[2] = c[2];
 			coefficients[3] = c[3];
+		}
+
+		virtual Vector3D intersect(Ray ray, double *color, int recursion){
+
 		}
 
 };
@@ -116,20 +203,47 @@ class Triangle: public Object {
 
 		void draw(){
 
+			glColor3f(color[0], color[1], color[2]);
+			glBegin(GL_TRIANGLES);
+			{
+				glVertex3f(a.x, a.y, a.z);
+				glVertex3f(b.x, b.y, b.z);
+				glVertex3f(c.x, c.y, c.z);
+			}
+			glEnd();
 		}
 
 };
 
 class Floor: public Object{
 public:
+	int tileCount;
 	Floor(int floorWidth, int tileWidth){
 		reference_point = Vector3D(-floorWidth/2, -floorWidth/2, 0);
 		length = tileWidth;
+		tileCount = floorWidth / tileWidth;
 
 	}
 
 	void draw(){
-
+		for (int i=0; i<tileCount; i++){
+			for (int j=0; j<tileCount; j++){
+				if (((i+j) % 2) == 0){
+					glColor3f(1,1,1);
+				}
+				else{
+					glColor3f(0,0,0);
+				}
+				glBegin(GL_QUADS);
+				{
+					glVertex3f(reference_point.x + i*length, reference_point.y + j*length, 0);
+					glVertex3f(reference_point.x + (i+1)*length, reference_point.y + j*length, 0);
+					glVertex3f(reference_point.x + (i+1)*length, reference_point.y + (j+1)*length, 0);
+					glVertex3f(reference_point.x + i*length, reference_point.y + (j+1)*length, 0);
+				}
+				glEnd();
+			}
+		}
 	}
 
 };
@@ -144,6 +258,7 @@ public:
 // declaration
 extern vector <Object*> objects;
 extern vector <Light> lights;
+extern double imageWidth, imageHeight;
 
 
 
@@ -162,6 +277,9 @@ void loadData(){
 	getline(sceneInput, input);
 	stringstream lineRes(input);
 	lineRes >> resolution;
+
+	imageWidth = resolution;
+	imageHeight = resolution;
 
 
     getline(sceneInput, input);
@@ -328,7 +446,7 @@ void loadData(){
 	}
 
 	Object *floor;
-	floor = new Floor(1000, 20);
+	floor = new Floor(400, 20);
 	objects.push_back(floor);
 
 }
