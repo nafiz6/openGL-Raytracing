@@ -120,7 +120,6 @@ class Camera {
 
 
 Camera camera;
-vector<Vector3D> bullets;
 
 Vector3D bulletCollision(){
 	Vector3D res;
@@ -545,11 +544,6 @@ void mouseListener(int button, int state, int x, int y){	//x, y is the x-y of th
 		case GLUT_LEFT_BUTTON:
 			if(state == GLUT_DOWN){		// 2 times?? in ONE click? -- solution is checking DOWN or UP
 				//shoot
-				Vector3D bullet = bulletCollision();	
-				if (bullet.x <= 400 && bullet.x >=-400 && bullet.y <= 400 && bullet.y >= -400){
-					bullets.push_back(bullet);
-					//cout << "BULLET PUSHED" << endl;
-				}
 			}
 			break;
 
